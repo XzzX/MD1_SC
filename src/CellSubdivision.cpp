@@ -45,14 +45,14 @@ void	CellSubdivision::DeleteParticle(const unsigned int cellId, const unsigned i
 @param id id of the particle
 @return list iterator of a list of nearest neighbours
 */
-list<int>::iterator CellSubdivision::GetNeighbours(const unsigned int cellId, const unsigned int id){
+list<unsigned int>::iterator CellSubdivision::GetNeighbours(const unsigned int cellId, const unsigned int id){
     m_neighbours.clear();
 
     int x,y;
     int a,b;
     GetCoordinates(cellId, x, y);
 
-    set<int>::iterator it;
+    set<unsigned int>::iterator it;
 
     for (int i = x-1; i<x+2; i++)
         for (int j = y-1; j<y+2; j++){

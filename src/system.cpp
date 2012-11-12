@@ -8,7 +8,7 @@
 
 using namespace std;
 
-molecular_dynamics::molecular_dynamics(const configuration &init_config) : m_timeElapsed(0.0), m_R(0.0), m_generator(init_config.seed){
+molecular_dynamics::molecular_dynamics(const configuration &init_config) : m_generator(init_config.seed), m_R(0.0), m_timeElapsed(0.0){
 	(this)->m_config = init_config;
 
     initialise_particles();
@@ -31,19 +31,49 @@ double	molecular_dynamics::RandomUniform(double start, double stop){
 	return uni();
 }
 
+/**
+Calculates the minimum distance between two particles in correspondence to boundary conditions.
+@param dist plain distance between two particles
+**/
 void	molecular_dynamics::CorrectDistance(Vector& dist){
 	if (dist[0]>(m_config.box_width*0.5)) dist[0]-=m_config.box_width; else
 		if (dist[0]<(-m_config.box_width*0.5)) dist[0]+=m_config.box_width;
 	if (dist[1]>(m_config.box_height*0.5)) dist[1]-=m_config.box_height; else
 		if (dist[1]<(-m_config.box_height*0.5)) dist[1]+=m_config.box_height;
 }
-void	molecular_dynamics::CorrectPosition(Vector& pos){
-	if (pos[0]>(m_config.box_width))	pos[0]-=m_config.box_width; else
-		if (pos[0]<(0.0))					pos[0]+=m_config.box_width;
-	if (pos[1]>(m_config.box_height))	pos[1]-=m_config.box_height; else
-		if (pos[1]<(0.0))					pos[1]+=m_config.box_height;
+
+/**
+Calculates the position correction with paying attention to boundary conditions. Also saves the count of border crossings.
+@param part particle which should be corrected
+**/
+void	molecular_dynamics::CorrectPosition(particles& part){
+	if (part.m_position[0]>(m_config.box_width)){
+	    part.m_position[0] -= m_config.box_width;
+	    part.m_borderCrossingX++;
+    }else if (part.m_position[0]<(0.0)){
+        part.m_position[0] += m_config.box_width;
+        part.m_borderCrossingX--;
+    }
+	if (part.m_position[1]>(m_config.box_height)){
+	    part.m_position[1] -= m_config.box_height;
+	    part.m_borderCrossingY++;
+    }else if (part.m_position[1]<(0.0)){
+        part.m_position[1] += m_config.box_height;
+        part.m_borderCrossingY--;
+    }
 }
 
+/**
+Dumps observed data to file. Observed informations are:
+time
+position
+speed
+kinetic energy
+potential energy
+distance to start position
+distance to start position ^2
+@param filename filename of the dump file
+**/
 void    molecular_dynamics::DumpData(const std::string& filename){
     fstream fout(filename.c_str(), fstream::out);
 
@@ -51,118 +81,150 @@ void    molecular_dynamics::DumpData(const std::string& filename){
     list<Vector>::iterator it1 = velocity_list.begin();
     list<double>::iterator it2 = kin_energy.begin();
     list<double>::iterator it3 = pot_energy.begin();
-    for(unsigned int i=0; i<position_list.size(); i++, it0++, it1++, it2++, it3++){
+    list<double>::iterator it4 = m_D.begin();
+    list<double>::iterator it5 = m_D2.begin();
+    for(unsigned int i=0; i<position_list.size(); i++, it0++, it1++, it2++, it3++, it4++, it5++){
         fout << i*m_config.dt << "\t";
         fout << *it0 << "\t";
         fout << *it1 << "\t";
 		fout << *it2 << "\t";
-        fout << *it3 << endl;
+		fout << *it3 << "\t";
+		fout << *it4 << "\t";
+        fout << *it5 << endl;
 
     }
     fout.close();
 }
 
 void molecular_dynamics::initialise_particles(){
-	std::cout << "initialising particles" << std::endl;
     m_particles.clear();
-    if (m_config.lattice == onlyone){
-        //initialise the particle
-        particles dummy;
-        dummy.m_position = Vector(20.0, 0.0, 0.0);
-        dummy.m_speed = Vector(0.0, 5.0, 0.0);
-        dummy.m_acceleration = Vector(0.0, 0.0, 0.0);
-        dummy.m_radius = 2.0;
-        dummy.m_mass = 1.0;
-        dummy.m_color = c_white;
-
-        m_particles.push_back(dummy);
-		std::cout << "1 particle initialised" << std::endl;
-		m_config.number_particles = 1;
-    } else
-    if (m_config.lattice == rectangular){
-        //axial_ratio = v/h
-		Vector	a(1.0, 0, 0);
-		Vector	b(0, 1.0, 0);
-
-		a *= m_config.m_latticeConstant * m_config.sigma;
-		b *= m_config.m_latticeConstant * m_config.sigma;
-
-		a *= m_config.sigma;
-		b *= m_config.sigma;
-
-		unsigned int	numa(floor(sqrt(m_config.number_particles/m_config.axial_ratio)));
-		unsigned int	numb(floor(numa * m_config.axial_ratio));
-
-		Vector delta(m_config.space_in_x,m_config.space_in_y, 0.0);
-
-		for (unsigned int i = 0; i<numa; i++)
-			for (unsigned int j = 0; j<numb; j++){
-				particles dummy;
-				dummy.m_position = i*a + j*b + delta;
-				double alpha = RandomUniform(0.0, 2*M_PI);
-				dummy.m_speed = Vector(cos(alpha), sin(alpha), 0.0) * m_config.m_particleSpeed;
-				dummy.m_acceleration = Vector(0.0, 0.0, 0.0);
-				dummy.m_radius = 0.2;
-				dummy.m_mass = 1.0;
-				dummy.m_color = c_white;
-
-				m_particles.push_back(dummy);
-			}
-
-		m_config.box_height = (numb-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_y;
-		m_config.box_width  = (numa-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_x;
-
-		std::cout << numa*numb <<" particles initialised" << std::endl;
-		m_config.number_particles = numa*numb;
-    } else
-    if (m_config.lattice == triangular){
-        //axial_ratio = v/h
-		Vector	a(1.0, 0, 0);
-		Vector	b(cos(M_PI/3.0), sin(M_PI/3.0), 0);
-
-		a *= m_config.m_latticeConstant * m_config.sigma;
-		b *= m_config.m_latticeConstant * m_config.sigma;
-
-		unsigned int	numa(floor(sqrt(m_config.number_particles/m_config.axial_ratio)));
-		unsigned int	numb(floor(numa * m_config.axial_ratio));
-
-		Vector delta(m_config.space_in_x,m_config.space_in_y, 0.0);
-
-		for (unsigned int i = 0; i<numa; i++)
-			for (unsigned int j = 0; j<numb; j++){
-				particles dummy;
-				dummy.m_position = i*a + j*b - (j/2)*a + delta;
-				double alpha = RandomUniform(0.0, 2*M_PI);
-				dummy.m_speed = Vector(cos(alpha), sin(alpha), 0.0) * m_config.m_particleSpeed;
-				dummy.m_acceleration = Vector(0.0, 0.0, 0.0);
-				dummy.m_radius = 0.2;
-				dummy.m_mass = 1.0;
-				dummy.m_color = c_white;
-
-				m_particles.push_back(dummy);
-			}
-
-		m_config.box_height = b[1] * (numb-1) + 2*m_config.space_in_y;
-		m_config.box_width  = (numa-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_x;
-
-		std::cout << numa*numb <<" particles initialised" << std::endl;
-		m_config.number_particles = numa*numb;
-    }
+    if (m_config.lattice == onlyone) InitParticlesOne();
+    if (m_config.lattice == rectangular) InitParticlesRectangular();
+    if (m_config.lattice == triangular) InitParticlesTriangular();
+    m_config.number_particles = GetNumberParticles();
+    m_startPosition.clear();
+    for (unsigned int i=0; i<GetNumberParticles(); i++)
+        m_startPosition.push_back(m_particles[i].m_position);
 }
 
+/**
+Initialises one particle
+**/
+void molecular_dynamics::InitParticlesOne(){
+    //initialise the particle
+    particles dummy;
+
+    EmptyParticle(dummy);
+    dummy.m_position = Vector(20.0, 0.0, 0.0);
+    dummy.m_speed = Vector(0.0, 5.0, 0.0);
+
+    m_particles.push_back(dummy);
+}
+
+/**
+Tries to initialise m_config.number_particles particles in a rectangular pattern.
+**/
+void molecular_dynamics::InitParticlesRectangular(){
+    //axial_ratio = v/h
+    Vector	a(1.0, 0, 0);
+    Vector	b(0, 1.0, 0);
+
+    a *= m_config.m_latticeConstant * m_config.sigma;
+    b *= m_config.m_latticeConstant * m_config.sigma;
+
+    a *= m_config.sigma;
+    b *= m_config.sigma;
+
+    unsigned int	numa(floor(sqrt(m_config.number_particles/m_config.axial_ratio)));
+    unsigned int	numb(floor(numa * m_config.axial_ratio));
+
+    Vector delta(m_config.space_in_x,m_config.space_in_y, 0.0);
+
+    for (unsigned int i = 0; i<numa; i++)
+        for (unsigned int j = 0; j<numb; j++){
+            particles dummy;
+
+            EmptyParticle(dummy);
+            dummy.m_position = i*a + j*b + delta;
+            double alpha = RandomUniform(0.0, 2*M_PI);
+            dummy.m_speed = Vector(cos(alpha), sin(alpha), 0.0) * m_config.m_particleSpeed;
+            dummy.m_radius = 0.2;
+
+            m_particles.push_back(dummy);
+        }
+
+    m_config.box_height = (numb-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_y;
+    m_config.box_width  = (numa-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_x;
+}
+
+/**
+Tries to initialise m_config.number_particles particles in a triangular pattern.
+**/
+void molecular_dynamics::InitParticlesTriangular(){
+    //axial_ratio = v/h
+    Vector	a(1.0, 0, 0);
+    Vector	b(cos(M_PI/3.0), sin(M_PI/3.0), 0);
+
+    a *= m_config.m_latticeConstant * m_config.sigma;
+    b *= m_config.m_latticeConstant * m_config.sigma;
+
+    unsigned int	numa(floor(sqrt(m_config.number_particles/m_config.axial_ratio)));
+    unsigned int	numb(floor(numa * m_config.axial_ratio));
+
+    Vector delta(m_config.space_in_x,m_config.space_in_y, 0.0);
+
+    for (unsigned int i = 0; i<numa; i++)
+        for (unsigned int j = 0; j<numb; j++){
+            particles dummy;
+
+            EmptyParticle(dummy);
+            dummy.m_position = i*a + j*b - (j/2)*a + delta;
+            double alpha = RandomUniform(0.0, 2*M_PI);
+            dummy.m_speed = Vector(cos(alpha), sin(alpha), 0.0) * m_config.m_particleSpeed;
+            dummy.m_radius = 0.2;
+
+            m_particles.push_back(dummy);
+        }
+
+    m_config.box_height = b[1] * (numb-1) + 2*m_config.space_in_y;
+    m_config.box_width  = (numa-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_x;
+}
+
+/**
+Calculates the potential of the harmonic oscillator 0.5*eps*x^2
+@param pos position of the particle
+@param eps parameter of the harmonic oscillator potential
+@return value of the potential
+**/
 double molecular_dynamics::potentialO(const Vector& pos, const double eps){
     return -0.5*eps*norm(pos);
 }
 
+/**
+Calculates the Lennard-Jones-Potential
+@param rij distance from the particle
+@return value of the potential
+**/
 double molecular_dynamics::potentialLJ(const Vector& rij){
     return -0.5*norm(rij);
 }
 
+/**
+Calculates the resulting force of potential of the harmonic oscillator 0.5*eps*x^2
+@param pos position of the particle
+@param eps parameter of the harmonic oscillator potential
+@return value of the potential
+**/
 Vector molecular_dynamics::forceO(const Vector& pos, const double eps){
 	//harmonic oscillator
     return -eps*pos;
 }
 
+/**
+Calculates the resulting force of Lennard-Jones-Potential
+@param rij distance from the particle
+@return value of the potential
+**/
 Vector molecular_dynamics::forceLJ(const Vector& rij){
 	//Lenard-Jones
 	double r = norm(rij);
@@ -171,30 +233,54 @@ Vector molecular_dynamics::forceLJ(const Vector& rij){
 
 void molecular_dynamics::move_timestep()
 {
-    integrate_equation_of_motion();
+    if (m_config.int_method==euler) IntegrateEuler();
+    else if (m_config.int_method==leap_frog) IntegrateLeapFrog();
+
     m_timeElapsed += m_config.dt;
 }
 
-void molecular_dynamics::integrate_equation_of_motion(){
+/**
+Integrates the equation of motion with Euler's method
+**/
+void molecular_dynamics::IntegrateEuler(){
     for(unsigned int i=0; i<GetNumberParticles(); i++){
-
-		m_particles[i].m_speed += m_particles[i].m_acceleration*m_config.dt*0.5;
         m_particles[i].m_position += m_particles[i].m_speed*m_config.dt;
-		//m_particles[i].m_speed += m_particles[i].m_acceleration*m_config.dt*1.0;
-	}
-	calculate_acceleration();
-	for(unsigned int i=0; i<GetNumberParticles(); i++){
-		m_particles[i].m_speed += m_particles[i].m_acceleration*m_config.dt*0.5;
-
-		if (m_config.boundaries==periodic) CorrectPosition(m_particles[i].m_position);
-		m_CellSubdivision->DeleteParticle(m_particles[i].m_cell_id, i);
-		m_particles[i].m_cell_id = m_CellSubdivision->InsertParticle(m_particles[i].m_position, i);
+        m_particles[i].m_speed += m_particles[i].m_acceleration*m_config.dt*1.0;
+        CalculateAcceleration();
+		if (m_config.boundaries==periodic){
+		    CorrectPosition(m_particles[i]);
+            UpdateParticleWithinCellSubdivision(i);
+		}
 		//m_particles[i].m_color = m_CellSubdivision->GetCellColor(m_particles[i].m_cell_id);
 	}
 }
 
-void molecular_dynamics::calculate_acceleration(){
-    list<int>::iterator    it;
+/**
+Integrates the equation of motion with LeapFrog method
+**/
+void molecular_dynamics::IntegrateLeapFrog(){
+    for(unsigned int i=0; i<GetNumberParticles(); i++){
+
+		m_particles[i].m_speed += m_particles[i].m_acceleration*m_config.dt*0.5;
+        m_particles[i].m_position += m_particles[i].m_speed*m_config.dt;
+	}
+	CalculateAcceleration();
+	for(unsigned int i=0; i<GetNumberParticles(); i++){
+		m_particles[i].m_speed += m_particles[i].m_acceleration*m_config.dt*0.5;
+
+		if (m_config.boundaries==periodic){
+		    CorrectPosition(m_particles[i]);
+            UpdateParticleWithinCellSubdivision(i);
+		}
+		//m_particles[i].m_color = m_CellSubdivision->GetCellColor(m_particles[i].m_cell_id);
+	}
+}
+
+/**
+Calculates the actual acceleration within the current potential
+**/
+void molecular_dynamics::CalculateAcceleration(){
+    list<unsigned int>::iterator    it;
 	for(unsigned int i=0; i<GetNumberParticles(); i++){
 
 		Vector F(0,0,0);
@@ -231,6 +317,10 @@ void molecular_dynamics::Observe(){
         Vector v(0,0,0);
         double  Ekin(0);
         double  Epot(0);
+        double  D = 0.0;
+        double  D2 = 0.0;
+        Vector  a(m_config.box_width,0.0,0.0);
+        Vector  b(0.0,m_config.box_height,0.0);
         for (unsigned int i = 0; i < GetNumberParticles(); i++){
             pos += m_particles[i].m_position;
 			v += m_particles[i].m_speed;
@@ -240,11 +330,16 @@ void molecular_dynamics::Observe(){
 			    if (m_config.boundaries==periodic) CorrectDistance(rij);
 				Epot += potentialLJ(rij);
 			}
+			double  d = norm(m_particles[i].m_position+m_particles[i].m_borderCrossingX*a+m_particles[i].m_borderCrossingY*b - m_startPosition[i]);
+			D += d;
+			D2 += d*d;
         }
         position_list.push_back(pos / GetNumberParticles());
         velocity_list.push_back(v / GetNumberParticles());
         pot_energy.push_back(Epot);
         kin_energy.push_back(Ekin);
+        m_D.push_back(D/GetNumberParticles());
+        m_D2.push_back(D2/GetNumberParticles());
     }
 }
 

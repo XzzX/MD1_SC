@@ -43,6 +43,9 @@ class molecular_dynamics {
         //use these lists for storing position and velocity
 
         std::vector<particles> m_particles;
+        std::vector<Vector> m_startPosition;
+        std::list<double> m_D;
+        std::list<double> m_D2;
 
         double  m_R;
         double  m_timeElapsed;
@@ -62,28 +65,39 @@ class molecular_dynamics {
 		double	RandomUniform(double start, double stop);
 
 		void	CorrectDistance(Vector& dist);
-		void	CorrectPosition(Vector& pos);
+		void	CorrectPosition(particles& pos);
 
         ///save all observables
         void    Observe();
 
         void    Correlate();
 
+        void    UpdateParticleWithinCellSubdivision(const unsigned int i); //inline
+
     private:
 
         ///use this function to calculate the starting configuration of the particles
         void initialise_particles();
+        void InitParticlesOne();
+        void InitParticlesRectangular();
+        void InitParticlesTriangular();
 
 		double potentialO(const Vector& pos, const double eps=0.5);
 		double potentialLJ(const Vector& rij);
 		Vector forceO(const Vector& pos, const double eps=0.5);
 		Vector forceLJ(const Vector& rij);
 
-        ///this function integrates the equation of motion either by using euler steps or by leapfrog integration
-        void integrate_equation_of_motion();
+        void IntegrateEuler();
+        void IntegrateLeapFrog();
 
         ///use this function to calculate the acceleration of the particle
-        void calculate_acceleration();
+        void CalculateAcceleration();
 };
+
+inline
+void    molecular_dynamics::UpdateParticleWithinCellSubdivision(const unsigned int i){
+    m_CellSubdivision->DeleteParticle(m_particles[i].m_cell_id, i);
+    m_particles[i].m_cell_id = m_CellSubdivision->InsertParticle(m_particles[i].m_position, i);
+}
 
 #endif

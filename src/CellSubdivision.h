@@ -12,10 +12,12 @@ using namespace std;
 
 class CellSubdivision {
     private:
-		///Width of the Box
-		double m_boxWidth;
+		///origin of the box
+		Vector	m_origin;
 		///Height of the Box
 		double m_boxHeight;
+		///Width of the Box
+		double m_boxWidth;
 		///Cut-Off distance
 		double m_cellWidth;
 		double m_cellHeight;
@@ -25,12 +27,10 @@ class CellSubdivision {
 		///number of cells in y direction
 		unsigned int	m_numCellsY;
 
-		///origin of the box
-		Vector	m_origin;
 		///Cell content
-		vector< set<int> > 	m_cells;
+		vector< set<unsigned int> > 	m_cells;
 		///list of nearest neighbours. will be changed with GetNeighbours
-		list<int>   m_neighbours;
+		list<unsigned int>   m_neighbours;
 		///return 1D cell id from 2D coordinates
 		unsigned int	GetCell(const int x, const int y); //inline
 
@@ -42,8 +42,8 @@ class CellSubdivision {
 		unsigned int GetNumCellsY(); //inline
 		cColor	GetCellColor(const unsigned int cellId); //inline
 
-        inline list<int>::iterator   GetNeighbourBegin() {return m_neighbours.begin();};
-        inline list<int>::iterator   GetNeighbourEnd() {return m_neighbours.end();};
+        inline list<unsigned int>::iterator   GetNeighbourBegin() {return m_neighbours.begin();};
+        inline list<unsigned int>::iterator   GetNeighbourEnd() {return m_neighbours.end();};
 
 		///constructor
 		CellSubdivision(const double width, const double height, const double rc);
@@ -54,25 +54,25 @@ class CellSubdivision {
 		void	DeleteParticle(const unsigned int cellId, const unsigned int id);
 
 		///return list iterator of neighbours
-		list<int>::iterator GetNeighbours(const unsigned int cellId, const unsigned int id);
+		list<unsigned int>::iterator GetNeighbours(const unsigned int cellId, const unsigned int id);
 };
 
-inline 
-unsigned int	CellSubdivision::GetCell(const int x, const int y) { 
+inline
+unsigned int	CellSubdivision::GetCell(const int x, const int y) {
 	int a = y*m_numCellsX+x;
 	if (a<0) a=0;
-	if (a>m_numCellsX*m_numCellsY-1) a = m_numCellsX*m_numCellsY-1;
+	if (a>static_cast<int>(m_numCellsX*m_numCellsY)-1) a = static_cast<int>(m_numCellsX*m_numCellsY)-1;
 	return a;
 }
 
-inline 
-void	CellSubdivision::GetCoordinates(const unsigned int cellId, unsigned int& x, unsigned int& y){ 
-	x = cellId%GetNumCellsX(); 
+inline
+void	CellSubdivision::GetCoordinates(const unsigned int cellId, unsigned int& x, unsigned int& y){
+	x = cellId%GetNumCellsX();
 	y = cellId/GetNumCellsX();
 }
-inline 
-void	CellSubdivision::GetCoordinates(const unsigned int cellId, int& x, int& y){ 
-	x = cellId%GetNumCellsX(); 
+inline
+void	CellSubdivision::GetCoordinates(const unsigned int cellId, int& x, int& y){
+	x = cellId%GetNumCellsX();
 	y = cellId/GetNumCellsX();
 }
 

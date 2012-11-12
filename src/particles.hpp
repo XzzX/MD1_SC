@@ -72,8 +72,22 @@ struct particles {
     double m_mass;
     cColor m_color;
     unsigned int m_cell_id;
+    int m_borderCrossingX;
+    int m_borderCrossingY;
 };
 
+inline
+void    EmptyParticle(particles& part){
+    part.m_position = Vector(0.0, 0.0, 0.0);
+    part.m_speed = Vector(0.0, 0.0, 0.0);
+    part.m_acceleration = Vector(0.0, 0.0, 0.0);
+    part.m_radius = 1.0;
+    part.m_mass = 1.0;
+    part.m_color = c_white;
+    part.m_cell_id = 0;
+    part.m_borderCrossingX = 0;
+    part.m_borderCrossingY = 0;
+}
 inline std::ostream &operator << (std::ostream &stream, const particles& particle)
 {
     //overloaded ostream << operator to display the current information about one single particle
