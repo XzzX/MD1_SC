@@ -1,6 +1,7 @@
 #include <iostream>
 #include <list>
 #include <fstream>
+#include    <string>
 
 #include "system.hpp"
 
@@ -206,7 +207,12 @@ Calculates the Lennard-Jones-Potential
 @return value of the potential
 **/
 double molecular_dynamics::potentialLJ(const Vector& rij){
-    return -0.5*norm(rij);
+	//Lenard-Jones
+	double r = norm(rij);
+	if (r>m_config.r_cut)
+        return 0.0;
+	else
+        return 4.0 * m_config.epsilon * ( pow(m_config.sigma/r, 12) - pow(m_config.sigma/r,6) ) + m_config.epsilon;
 }
 
 /**
@@ -228,7 +234,10 @@ Calculates the resulting force of Lennard-Jones-Potential
 Vector molecular_dynamics::forceLJ(const Vector& rij){
 	//Lenard-Jones
 	double r = norm(rij);
-	return 24.0 * m_config.epsilon / m_config.sigma / m_config.sigma * ( pow(m_config.sigma/r, 8) - 2 * pow(m_config.sigma/r,14) ) * rij;
+	if (r>m_config.r_cut)
+        return Vector(0.0,0.0,0.0);
+	else
+        return 24.0 * m_config.epsilon / m_config.sigma / m_config.sigma * ( pow(m_config.sigma/r, 8) - 2 * pow(m_config.sigma/r,14) ) * rij;
 }
 
 void molecular_dynamics::move_timestep()
@@ -345,24 +354,33 @@ void molecular_dynamics::Observe(){
 
 void    molecular_dynamics::Correlate(){
     //histogram
-    static const unsigned int bins = 200;
+    static const unsigned int bins = 500;
 
     Histogram   histo(0.0, m_config.box_width*0.5, bins);
+
+    fstream fout(std::string("corraw_").append(m_config.logname).c_str(), fstream::out);
 
     for (unsigned int i = 0; i < GetNumberParticles(); i++)
         for (unsigned int j = i+1; j < GetNumberParticles(); j++){
             Vector rij(m_particles[j].m_position - m_particles[i].m_position);
             if (m_config.boundaries==periodic) CorrectDistance(rij);
             histo.Add(norm(rij));
+            fout << norm(rij) << std::endl;
         }
+
+    fout.close();
 
 
     //dump
-    fstream fout("correlation.txt", fstream::out);
+    fout.open(std::string("cor_").append(m_config.logname).c_str(), fstream::out);
 
     for (unsigned int i = 0; i < bins; i++)
         fout << histo.GetXUpper(i) <<  "\t" << histo.GetValue(i) <<  "\t" <<
         (m_config.box_height*m_config.box_width*histo.GetValue(i)/2.0/M_PI/histo.GetBinWidth()/histo.GetBinWidth()/m_config.number_particles/m_config.number_particles/(static_cast<double>(i)-0.5)) << std::endl;
 
     fout.close();
+
+    std::cout << "box_height: " << m_config.box_height << std::endl;
+    std::cout << "box_width : " << m_config.box_height << std::endl;
+    std::cout << "N         : " << m_config.number_particles << std::endl;
 }

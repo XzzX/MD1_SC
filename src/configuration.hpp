@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <string>
 
 enum integration_method {    //use this type to specify the integration method
     euler,                  //simple euler step
@@ -67,25 +68,27 @@ inline std::ostream &operator << (std::ostream &stream, const lattice_types latt
     return stream;
 }
 struct configuration{
-    unsigned int number_particles;  //number of particles in the simulation
-    unsigned int seed;              //seed of the random number generator
-    double temperature;             //temperature of the system
-    double sigma;                   //lengthscale of the potential
-    double epsilon;                 //strength of the potential
-    double normed_distance;         //initial distance between two neighboured particles (Gleichgewicht)
-    double r_cut;                   //cutting distance of the potential
-    double dt;                      //time discretization
-    double v_initial;               //absolut value of initial speed
-    double box_width;               //width  of the  simulation area
-    double box_height;              //height of the simulation area
-    double space_in_x;              //space between border and last particle
-    double space_in_y;              //space between border and last particle
-    double axial_ratio;             //ratio between the vertical and horizontal lattice rescale
-    integration_method int_method;  //integration method
-    lattice_types lattice;          //lattice, on which the particles are initialized. Choose between rectangular, triangular, random_lattice or individual configuration
-    boundary_condition boundaries;  //boundary_conditions, either no_boundaries or periodic
-	double m_latticeConstant;
-	double m_particleSpeed;
+    unsigned int number_particles;  ///number of particles in the simulation
+    unsigned int seed;              ///seed of the random number generator
+    double temperature;             ///temperature of the system
+    double sigma;                   ///lengthscale of the potential
+    double epsilon;                 ///strength of the potential
+    double normed_distance;         ///initial distance between two neighboured particles (Gleichgewicht)
+    double r_cut;                   ///cutting distance of the potential
+    double dt;                      ///time discretization
+    double box_width;               ///width  of the  simulation area
+    double box_height;              ///height of the simulation area
+    double space_in_x;              ///space between border and last particle
+    double space_in_y;              ///space between border and last particle
+    double axial_ratio;             ///ratio between the vertical and horizontal lattice rescale
+    integration_method int_method;  ///integration method
+    lattice_types lattice;          ///lattice, on which the particles are initialized. Choose between rectangular, triangular, random_lattice or individual configuration
+    boundary_condition boundaries;  ///boundary_conditions, either no_boundaries or periodic
+	double m_latticeConstant;       ///scaling of lattice
+	double m_particleSpeed;         ///initial speed of particles
+	bool    nogui;                  ///don't show graphical representation
+	unsigned int    runs;           ///number of simulations steps
+	std::string logname;            ///filename of the logfile
 };
 
 //overloaded << operator to show easily the configuration on the screen
@@ -112,7 +115,7 @@ inline std::ostream &operator << (std::ostream &stream, const configuration& my_
     stream << "dimensions of the box (width x height): (" << my_config.box_width << " x " << my_config.box_height << ")" << std::endl;
     stream << "chosen boundary conditions: " << my_config.boundaries << std::endl;
     stream << std::endl;
-    stream << std::setw(21) << "initial speed: " << my_config.v_initial << std::endl;
+    stream << std::setw(21) << "initial speed: " << my_config.m_particleSpeed << std::endl;
     stream << std::setw(21) << "lattice type:  " << my_config.lattice << std::endl;
     stream << std::setw(21) << "axial ratio:   " << my_config.axial_ratio << std::endl;
 	stream << std::setw(21) << "lattice constant:   " << my_config.m_latticeConstant << std::endl;
