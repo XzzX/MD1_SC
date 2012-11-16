@@ -9,8 +9,7 @@
 
 using namespace std;
 
-molecular_dynamics::molecular_dynamics(const configuration &init_config) : m_generator(init_config.seed), m_R(0.0), m_timeElapsed(0.0){
-	(this)->m_config = init_config;
+molecular_dynamics::molecular_dynamics(configuration &init_config) : m_generator(init_config.seed), m_R(0.0), m_timeElapsed(0.0), m_config(init_config){
 
     initialise_particles();
 
@@ -77,6 +76,7 @@ distance to start position ^2
 **/
 void    molecular_dynamics::DumpData(const std::string& filename){
     fstream fout(filename.c_str(), fstream::out);
+	fout << m_config;
 
     list<Vector>::iterator it0 = position_list.begin();
     list<Vector>::iterator it1 = velocity_list.begin();
@@ -360,6 +360,8 @@ void    molecular_dynamics::Correlate(){
 
     fstream fout(std::string("corraw_").append(m_config.logname).c_str(), fstream::out);
 
+	fout << m_config;
+
     for (unsigned int i = 0; i < GetNumberParticles(); i++)
         for (unsigned int j = i+1; j < GetNumberParticles(); j++){
             Vector rij(m_particles[j].m_position - m_particles[i].m_position);
@@ -373,7 +375,7 @@ void    molecular_dynamics::Correlate(){
 
     //dump
     fout.open(std::string("cor_").append(m_config.logname).c_str(), fstream::out);
-
+	fout << m_config;
     for (unsigned int i = 0; i < bins; i++)
         fout << histo.GetXUpper(i) <<  "\t" << histo.GetValue(i) <<  "\t" <<
         (m_config.box_height*m_config.box_width*histo.GetValue(i)/2.0/M_PI/histo.GetBinWidth()/histo.GetBinWidth()/m_config.number_particles/m_config.number_particles/(static_cast<double>(i)-0.5)) << std::endl;

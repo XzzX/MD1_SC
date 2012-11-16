@@ -32,7 +32,7 @@ class molecular_dynamics {
 		base_generator_type		m_generator;
 
         ///configuration structure with all parameters of the system
-        configuration m_config;
+        configuration& m_config;
 
         std::list<double> kin_energy;
         std::list<double> pot_energy;
@@ -55,7 +55,7 @@ class molecular_dynamics {
         inline unsigned int GetNumberParticles() const {return m_particles.size();};
 
         ///constructor of the class
-        molecular_dynamics(const configuration &init_config);
+        molecular_dynamics(configuration &init_config);
         ///move the simulation one timestep dt
         void move_timestep();
         ///dump all saved observables to a file
