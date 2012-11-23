@@ -87,6 +87,13 @@ public:
         return *this;
     }
 
+    Vector &operator/= (double rhs) {
+        d_[0] /= rhs;
+        d_[1] /= rhs;
+        d_[2] /= rhs;
+        return *this;
+    }
+
 private:
     double d_[3];
 };

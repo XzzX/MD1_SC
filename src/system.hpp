@@ -34,24 +34,39 @@ class molecular_dynamics {
         ///configuration structure with all parameters of the system
         configuration& m_config;
 
+        ///list of kinetic energy of the whole system for every time step
         std::list<double> kin_energy;
+        ///list of potential energy of the whole system for every time step
         std::list<double> pot_energy;
-        //use these lists to store the values of kinetic and potential energy
-
+        ///trajectories of 10 randomly choosen particles used for diffusion calculation
+        std::list<Vector> positionParticleList[10];
+        ///position of the center of mass for every time step
         std::list<Vector> position_list;
+        ///velocity of the center of mass for every time step
         std::list<Vector> velocity_list;
         //use these lists for storing position and velocity
 
+        ///list of all simulated particles
         std::vector<particles> m_particles;
+        ///saved starting positions of particles for diffusion calculation
         std::vector<Vector> m_startPosition;
+        ///linear diffusion
         std::list<double> m_D;
+        ///quadratic diffusion
         std::list<double> m_D2;
 
+        ///Lagrange-Multiplicator for constant temperature
+        double  alpha;
+
+        ///fricton constant for oscillator potential
         double  m_R;
+        ///total time the system has evolved
         double  m_timeElapsed;
 
+        ///handels subdivision of simulation box
 		CellSubdivision*	m_CellSubdivision;
 
+        ///returns number of particles which are simulated
         inline unsigned int GetNumberParticles() const {return m_particles.size();};
 
         ///constructor of the class
@@ -61,25 +76,33 @@ class molecular_dynamics {
         ///dump all saved observables to a file
         void    DumpData(const std::string& filename);
 
+        ///seed the random generator with the given value
 		void	RandomSeed(unsigned int seed);
+		///generate a uniform distributed random number
 		double	RandomUniform(double start, double stop);
 
+        ///corrects the distance between two particles in correspondence to boundary conditions
 		void	CorrectDistance(Vector& dist);
 		void	CorrectPosition(particles& pos);
 
         ///save all observables
         void    Observe();
 
-        void    Correlate();
+        ///calculates the correlation
+        void    CalculateEndStats();
 
+        ///updates the cell of the given particle
         void    UpdateParticleWithinCellSubdivision(const unsigned int i); //inline
 
     private:
 
         ///use this function to calculate the starting configuration of the particles
         void initialise_particles();
+        ///initialise only one particle
         void InitParticlesOne();
+        ///initialise particles in a rectangular shape
         void InitParticlesRectangular();
+        ///initalise particles in a triangular shape
         void InitParticlesTriangular();
 
 		double potentialO(const Vector& pos, const double eps=0.5);
@@ -92,6 +115,16 @@ class molecular_dynamics {
 
         ///use this function to calculate the acceleration of the particle
         void CalculateAcceleration();
+
+        void SetCMSP0();
+
+        ///updates lagrange mulitplicator alpha
+        void UpdateAlpha();
+
+        ///calculates the correlation
+        void    Correlate();
+        ///calculates the speed distribution
+        void    VelocityDistribution();
 };
 
 inline

@@ -142,7 +142,7 @@ int main( int argc, char **argv ) {
         }
     }
 	std::cout << perf.Mean() << std::endl;
-	md_system.Correlate();
+	md_system.CalculateEndStats();
     md_system.DumpData(my_config.logname);
 
 	std::cout << "Finished" << std::endl;

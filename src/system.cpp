@@ -76,7 +76,21 @@ distance to start position ^2
 **/
 void    molecular_dynamics::DumpData(const std::string& filename){
     fstream fout(filename.c_str(), fstream::out);
+    fstream fout2((std::string("rawpos_")).append(filename).c_str(), fstream::out);
+
 	fout << m_config;
+	fout2 << m_config;
+
+    list<Vector>::iterator pos0 = positionParticleList[0].begin();
+    list<Vector>::iterator pos1 = positionParticleList[1].begin();
+    list<Vector>::iterator pos2 = positionParticleList[2].begin();
+    list<Vector>::iterator pos3 = positionParticleList[3].begin();
+    list<Vector>::iterator pos4 = positionParticleList[4].begin();
+    list<Vector>::iterator pos5 = positionParticleList[5].begin();
+    list<Vector>::iterator pos6 = positionParticleList[6].begin();
+    list<Vector>::iterator pos7 = positionParticleList[7].begin();
+    list<Vector>::iterator pos8 = positionParticleList[8].begin();
+    list<Vector>::iterator pos9 = positionParticleList[9].begin();
 
     list<Vector>::iterator it0 = position_list.begin();
     list<Vector>::iterator it1 = velocity_list.begin();
@@ -84,7 +98,7 @@ void    molecular_dynamics::DumpData(const std::string& filename){
     list<double>::iterator it3 = pot_energy.begin();
     list<double>::iterator it4 = m_D.begin();
     list<double>::iterator it5 = m_D2.begin();
-    for(unsigned int i=0; i<position_list.size(); i++, it0++, it1++, it2++, it3++, it4++, it5++){
+    for(unsigned int i=0; i<position_list.size(); i++, it0++, it1++, it2++, it3++, it4++, it5++, pos0++, pos1++, pos2++, pos3++, pos4++, pos5++, pos6++, pos7++, pos8++, pos9++){
         fout << i*m_config.dt << "\t";
         fout << *it0 << "\t";
         fout << *it1 << "\t";
@@ -93,8 +107,10 @@ void    molecular_dynamics::DumpData(const std::string& filename){
 		fout << *it4 << "\t";
         fout << *it5 << endl;
 
+        fout2 << *pos0 << "\t" << *pos1 << "\t" << *pos2 << "\t" << *pos3 << "\t" << *pos4 << "\t" << *pos5 << "\t" << *pos6 << "\t" << *pos7 << "\t" << *pos8 << "\t" << *pos9 << "\t" << endl;
     }
     fout.close();
+    fout2.close();
 }
 
 void molecular_dynamics::initialise_particles(){
@@ -102,6 +118,9 @@ void molecular_dynamics::initialise_particles(){
     if (m_config.lattice == onlyone) InitParticlesOne();
     if (m_config.lattice == rectangular) InitParticlesRectangular();
     if (m_config.lattice == triangular) InitParticlesTriangular();
+
+    SetCMSP0();
+
     m_config.number_particles = GetNumberParticles();
     m_startPosition.clear();
     for (unsigned int i=0; i<GetNumberParticles(); i++)
@@ -320,6 +339,18 @@ void molecular_dynamics::CalculateAcceleration(){
 	}
 }
 
+void molecular_dynamics::UpdateAlpha(){
+    alpha = 0.0;
+    double alpha2(0.0);
+
+    for (unsigned int i=0; i<GetNumberParticles(); i++){
+        alpha -= dot(m_particles[i].m_position, m_particles[i].m_acceleration);
+        alpha2 += dot(m_particles[i].m_speed, m_particles[i].m_speed);
+    }
+
+    alpha /= alpha2;
+}
+
 void molecular_dynamics::Observe(){
     if ((m_timeElapsed/m_config.dt)<100000){
         Vector pos(0,0,0);
@@ -349,6 +380,17 @@ void molecular_dynamics::Observe(){
         kin_energy.push_back(Ekin);
         m_D.push_back(D/GetNumberParticles());
         m_D2.push_back(D2/GetNumberParticles());
+
+        positionParticleList[0].push_back(m_particles[111].m_position);
+        positionParticleList[1].push_back(m_particles[222].m_position);
+        positionParticleList[2].push_back(m_particles[333].m_position);
+        positionParticleList[3].push_back(m_particles[444].m_position);
+        positionParticleList[4].push_back(m_particles[555].m_position);
+        positionParticleList[5].push_back(m_particles[666].m_position);
+        positionParticleList[6].push_back(m_particles[777].m_position);
+        positionParticleList[7].push_back(m_particles[888].m_position);
+        positionParticleList[8].push_back(m_particles[561].m_position);
+        positionParticleList[9].push_back(m_particles[134].m_position);
     }
 }
 
@@ -385,4 +427,39 @@ void    molecular_dynamics::Correlate(){
     std::cout << "box_height: " << m_config.box_height << std::endl;
     std::cout << "box_width : " << m_config.box_height << std::endl;
     std::cout << "N         : " << m_config.number_particles << std::endl;
+}
+
+void molecular_dynamics::SetCMSP0(){
+    //berechne Gesamtimpuls
+    Vector p(0,0,0);
+
+    for (unsigned int i=0; i<m_particles.size(); i++){
+        p += m_particles[i].m_speed * m_particles[i].m_mass;
+    }
+
+    p /= static_cast<double>(m_particles.size());
+
+    std::cout << "Gesamtimpuls: " << p << std::endl;
+
+    //Neuberechnung der Impulse
+
+    for (unsigned int i=0; i<m_particles.size(); i++){
+        m_particles[i].m_speed -= p / m_particles[i].m_mass;
+    }
+}
+
+void molecular_dynamics::CalculateEndStats(){
+    Correlate();
+    VelocityDistribution();
+}
+
+void molecular_dynamics::VelocityDistribution(){
+    fstream fout((std::string("speed_")).append(m_config.logname).c_str(), fstream::out);
+	fout << m_config;
+
+	for (unsigned int i=0; i<GetNumberParticles(); i++){
+        fout << norm(m_particles[i].m_speed) << std::endl;
+	}
+
+	fout.close();
 }
