@@ -54,6 +54,8 @@ class molecular_dynamics {
         std::list<double> m_D;
         ///quadratic diffusion
         std::list<double> m_D2;
+        ///temperature
+        std::list<double> m_T;
 
         ///Lagrange-Multiplicator for constant temperature
         double  alpha;
@@ -93,6 +95,9 @@ class molecular_dynamics {
 
         ///updates the cell of the given particle
         void    UpdateParticleWithinCellSubdivision(const unsigned int i); //inline
+
+		///returns the current temperature of the system
+		double GetT();
 
     private:
 

@@ -27,14 +27,13 @@ int main( int argc, char **argv ) {
     configuration my_config;
 
     std::cout << "standard configuration" << std::endl;
+	///custom seed
     my_config.seed = 49;
+	///start
     my_config.number_particles = 1000;
-    my_config.sigma = 1.0;
-    my_config.epsilon = 1.0;
     my_config.temperature = 1.0;
-    my_config.normed_distance = 1.0*pow(2.0,1.0/6.0); //(Gleichgewicht)
-//        my_config.r_cut  = 2.5 * my_config.sigma;
-    my_config.r_cut  = pow(2.0,1.0/6.0) * my_config.sigma;
+	my_config.normed_distance  = pow(2.0,1.0/6.0);
+    my_config.r_cut  = my_config.normed_distance;
     my_config.int_method = leap_frog;
     my_config.dt = 0.01;
     my_config.lattice = triangular;
@@ -120,6 +119,7 @@ int main( int argc, char **argv ) {
 	boost::timer::cpu_timer timer;
 
     while (my_config.runs!=0){
+		timer.start();
         my_config.runs--;
         if (!my_config.nogui){
             if (main_frame->isOpen()) my_config.runs = 1;
@@ -127,10 +127,7 @@ int main( int argc, char **argv ) {
             main_frame->processEvents();
         }
 		md_system.Observe();
-		timer.start();
         md_system.move_timestep();
-        timer.stop();
-        perf.Add(timer.elapsed().user);
         if (!my_config.nogui){
             if (md_system.m_config.boundaries==periodic){
                 Vector pos(md_system.m_config.box_width*0.5, md_system.m_config.box_height*0.5, 0.0);
@@ -140,6 +137,8 @@ int main( int argc, char **argv ) {
                 drawParticle(md_system.m_particles[i], *main_frame);
             main_frame->display();
         }
+        timer.stop();
+        perf.Add(timer.elapsed().user);
     }
 	std::cout << perf.Mean() << std::endl;
 	md_system.CalculateEndStats();

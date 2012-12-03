@@ -98,14 +98,16 @@ void    molecular_dynamics::DumpData(const std::string& filename){
     list<double>::iterator it3 = pot_energy.begin();
     list<double>::iterator it4 = m_D.begin();
     list<double>::iterator it5 = m_D2.begin();
-    for(unsigned int i=0; i<position_list.size(); i++, it0++, it1++, it2++, it3++, it4++, it5++, pos0++, pos1++, pos2++, pos3++, pos4++, pos5++, pos6++, pos7++, pos8++, pos9++){
+	list<double>::iterator it6 = m_T.begin();
+    for(unsigned int i=0; i<position_list.size(); i++, it0++, it1++, it2++, it3++, it4++, it5++, it6++, pos0++, pos1++, pos2++, pos3++, pos4++, pos5++, pos6++, pos7++, pos8++, pos9++){
         fout << i*m_config.dt << "\t";
         fout << *it0 << "\t";
         fout << *it1 << "\t";
 		fout << *it2 << "\t";
 		fout << *it3 << "\t";
 		fout << *it4 << "\t";
-        fout << *it5 << endl;
+		fout << *it5 << "\t";
+        fout << *it6 << endl;
 
         fout2 << *pos0 << "\t" << *pos1 << "\t" << *pos2 << "\t" << *pos3 << "\t" << *pos4 << "\t" << *pos5 << "\t" << *pos6 << "\t" << *pos7 << "\t" << *pos8 << "\t" << *pos9 << "\t" << endl;
     }
@@ -149,11 +151,8 @@ void molecular_dynamics::InitParticlesRectangular(){
     Vector	a(1.0, 0, 0);
     Vector	b(0, 1.0, 0);
 
-    a *= m_config.m_latticeConstant * m_config.sigma;
-    b *= m_config.m_latticeConstant * m_config.sigma;
-
-    a *= m_config.sigma;
-    b *= m_config.sigma;
+    a *= m_config.m_latticeConstant;
+    b *= m_config.m_latticeConstant;
 
     unsigned int	numa(floor(sqrt(m_config.number_particles/m_config.axial_ratio)));
     unsigned int	numb(floor(numa * m_config.axial_ratio));
@@ -173,8 +172,8 @@ void molecular_dynamics::InitParticlesRectangular(){
             m_particles.push_back(dummy);
         }
 
-    m_config.box_height = (numb-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_y;
-    m_config.box_width  = (numa-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_x;
+    m_config.box_height = (numb-1) * m_config.m_latticeConstant + 2*m_config.space_in_y;
+    m_config.box_width  = (numa-1) * m_config.m_latticeConstant + 2*m_config.space_in_x;
 }
 
 /**
@@ -185,8 +184,8 @@ void molecular_dynamics::InitParticlesTriangular(){
     Vector	a(1.0, 0, 0);
     Vector	b(cos(M_PI/3.0), sin(M_PI/3.0), 0);
 
-    a *= m_config.m_latticeConstant * m_config.sigma;
-    b *= m_config.m_latticeConstant * m_config.sigma;
+    a *= m_config.m_latticeConstant;
+    b *= m_config.m_latticeConstant;
 
     unsigned int	numa(floor(sqrt(m_config.number_particles/m_config.axial_ratio)));
     unsigned int	numb(floor(numa * m_config.axial_ratio));
@@ -207,7 +206,7 @@ void molecular_dynamics::InitParticlesTriangular(){
         }
 
     m_config.box_height = b[1] * (numb-1) + 2*m_config.space_in_y;
-    m_config.box_width  = (numa-1) * m_config.m_latticeConstant * m_config.sigma + 2*m_config.space_in_x;
+    m_config.box_width  = (numa-1) * m_config.m_latticeConstant + 2*m_config.space_in_x;
 }
 
 /**
@@ -231,7 +230,7 @@ double molecular_dynamics::potentialLJ(const Vector& rij){
 	if (r>m_config.r_cut)
         return 0.0;
 	else
-        return 4.0 * m_config.epsilon * ( pow(m_config.sigma/r, 12) - pow(m_config.sigma/r,6) ) + m_config.epsilon;
+        return 4.0 * ( pow(1.0/r, 12) - pow(1.0/r,6) ) + 1.0;
 }
 
 /**
@@ -256,7 +255,7 @@ Vector molecular_dynamics::forceLJ(const Vector& rij){
 	if (r>m_config.r_cut)
         return Vector(0.0,0.0,0.0);
 	else
-        return 24.0 * m_config.epsilon / m_config.sigma / m_config.sigma * ( pow(m_config.sigma/r, 8) - 2 * pow(m_config.sigma/r,14) ) * rij;
+        return 24.0 * ( pow(1.0/r, 8) - 2 * pow(1.0/r,14) ) * rij;
 }
 
 void molecular_dynamics::move_timestep()
@@ -308,6 +307,7 @@ void molecular_dynamics::IntegrateLeapFrog(){
 Calculates the actual acceleration within the current potential
 **/
 void molecular_dynamics::CalculateAcceleration(){
+	UpdateAlpha();
     list<unsigned int>::iterator    it;
 	for(unsigned int i=0; i<GetNumberParticles(); i++){
 
@@ -364,7 +364,7 @@ void molecular_dynamics::Observe(){
         for (unsigned int i = 0; i < GetNumberParticles(); i++){
             pos += m_particles[i].m_position;
 			v += m_particles[i].m_speed;
-			Ekin += 0.5*m_particles[i].m_mass*norm_sq(m_particles[i].m_speed);
+			Ekin += 0.5*norm_sq(m_particles[i].m_speed);
 			for (unsigned int j = i+1; j < GetNumberParticles(); j++){
 			    Vector rij(m_particles[j].m_position - m_particles[i].m_position);
 			    if (m_config.boundaries==periodic) CorrectDistance(rij);
@@ -380,6 +380,7 @@ void molecular_dynamics::Observe(){
         kin_energy.push_back(Ekin);
         m_D.push_back(D/GetNumberParticles());
         m_D2.push_back(D2/GetNumberParticles());
+		m_T.push_back(GetT());
 
         positionParticleList[0].push_back(m_particles[111].m_position);
         positionParticleList[1].push_back(m_particles[222].m_position);
@@ -462,4 +463,17 @@ void molecular_dynamics::VelocityDistribution(){
 	}
 
 	fout.close();
+}
+
+/**
+Calculates the temperature of the current state of the system.
+The unit of the temperature is epsilon/k
+@return Temperature
+**/
+double molecular_dynamics::GetT(){
+	double T = 0;
+	for (unsigned int i=0; i<GetNumberParticles(); i++)
+		T += norm_sq(m_particles[i].m_speed);
+	T /= (2.0 * (m_config.number_particles-1));
+	return T;
 }

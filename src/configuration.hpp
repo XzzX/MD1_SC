@@ -71,8 +71,6 @@ struct configuration{
     unsigned int number_particles;  ///number of particles in the simulation
     unsigned int seed;              ///seed of the random number generator
     double temperature;             ///temperature of the system
-    double sigma;                   ///lengthscale of the potential
-    double epsilon;                 ///strength of the potential
     double normed_distance;         ///initial distance between two neighboured particles (Gleichgewicht)
     double r_cut;                   ///cutting distance of the potential
     double dt;                      ///time discretization
@@ -98,8 +96,6 @@ inline std::ostream &operator << (std::ostream &stream, const configuration& my_
 	stream << "#number of particles: " << my_config.number_particles << std::endl;
 	stream << "#seed:                " << my_config.seed << std::endl;
 	stream << "#temperature:         " << my_config.temperature << std::endl;
-	stream << "#sigma:               " << my_config.sigma << std::endl;
-	stream << "#epsilon:             " << my_config.epsilon << std::endl;
 	stream << "#normed distance:     " << my_config.normed_distance << std::endl;
 	stream << "#r_cut:               " << my_config.r_cut << std::endl;
 	stream << "#dt:                  " << my_config.dt << std::endl;
