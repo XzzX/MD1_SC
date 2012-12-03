@@ -41,7 +41,7 @@ int main( int argc, char **argv ) {
     my_config.box_width = 100.0;
     my_config.box_height = 100.0;
     my_config.boundaries = periodic;
-    my_config.m_latticeConstant = my_config.normed_distance * 1.1;
+    my_config.m_latticeConstant = my_config.normed_distance * 0.8;
     my_config.space_in_x = my_config.m_latticeConstant * 0.5;
     my_config.space_in_y = my_config.m_latticeConstant * 0.5;
     my_config.m_particleSpeed = 1.0;

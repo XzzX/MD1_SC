@@ -28,6 +28,7 @@ typedef boost::minstd_rand base_generator_type;
 
 class molecular_dynamics {
     public:
+		unsigned int	m_betaCounter;
 		///random number generator
 		base_generator_type		m_generator;
 
@@ -97,7 +98,9 @@ class molecular_dynamics {
         void    UpdateParticleWithinCellSubdivision(const unsigned int i); //inline
 
 		///returns the current temperature of the system
-		double GetT();
+		double	GetT();
+
+		void	UpdateBeta();
 
     private:
 

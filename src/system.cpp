@@ -9,7 +9,7 @@
 
 using namespace std;
 
-molecular_dynamics::molecular_dynamics(configuration &init_config) : m_generator(init_config.seed), m_R(0.0), m_timeElapsed(0.0), m_config(init_config){
+molecular_dynamics::molecular_dynamics(configuration &init_config) : m_generator(init_config.seed), m_R(0.0), m_timeElapsed(0.0), m_config(init_config), m_betaCounter(0){
 
     initialise_particles();
 
@@ -127,6 +127,8 @@ void molecular_dynamics::initialise_particles(){
     m_startPosition.clear();
     for (unsigned int i=0; i<GetNumberParticles(); i++)
         m_startPosition.push_back(m_particles[i].m_position);
+
+	m_config.temperature = GetT();
 }
 
 /**
@@ -263,6 +265,13 @@ void molecular_dynamics::move_timestep()
     if (m_config.int_method==euler) IntegrateEuler();
     else if (m_config.int_method==leap_frog) IntegrateLeapFrog();
 
+	m_betaCounter++;
+
+	if (m_betaCounter>10){
+		UpdateBeta();
+		m_betaCounter = 0;
+	}
+
     m_timeElapsed += m_config.dt;
 }
 
@@ -307,7 +316,6 @@ void molecular_dynamics::IntegrateLeapFrog(){
 Calculates the actual acceleration within the current potential
 **/
 void molecular_dynamics::CalculateAcceleration(){
-	UpdateAlpha();
     list<unsigned int>::iterator    it;
 	for(unsigned int i=0; i<GetNumberParticles(); i++){
 
@@ -337,6 +345,10 @@ void molecular_dynamics::CalculateAcceleration(){
 
 		m_particles[i].m_acceleration = F/m_particles[i].m_mass;
 	}
+
+	UpdateAlpha();
+	for(unsigned int i=0; i<GetNumberParticles(); i++)
+		m_particles[i].m_acceleration += alpha * m_particles[i].m_speed;
 }
 
 void molecular_dynamics::UpdateAlpha(){
@@ -344,11 +356,22 @@ void molecular_dynamics::UpdateAlpha(){
     double alpha2(0.0);
 
     for (unsigned int i=0; i<GetNumberParticles(); i++){
-        alpha -= dot(m_particles[i].m_position, m_particles[i].m_acceleration);
+        alpha -= dot(m_particles[i].m_speed, m_particles[i].m_acceleration);
         alpha2 += dot(m_particles[i].m_speed, m_particles[i].m_speed);
     }
 
     alpha /= alpha2;
+}
+
+void molecular_dynamics::UpdateBeta(){
+	double beta = 0;
+    for (unsigned int i=0; i<GetNumberParticles(); i++){
+        beta += dot(m_particles[i].m_speed, m_particles[i].m_speed);
+    }
+	beta = sqrt( (2.0*(m_config.number_particles-1)*m_config.temperature)/(beta) );
+    for (unsigned int i=0; i<GetNumberParticles(); i++){
+        m_particles[i].m_speed = beta * m_particles[i].m_speed;
+    }
 }
 
 void molecular_dynamics::Observe(){
@@ -392,6 +415,16 @@ void molecular_dynamics::Observe(){
         positionParticleList[7].push_back(m_particles[888].m_position);
         positionParticleList[8].push_back(m_particles[561].m_position);
         positionParticleList[9].push_back(m_particles[134].m_position);
+        /*positionParticleList[0].push_back(m_particles[1].m_position);
+        positionParticleList[1].push_back(m_particles[2].m_position);
+        positionParticleList[2].push_back(m_particles[3].m_position);
+        positionParticleList[3].push_back(m_particles[4].m_position);
+        positionParticleList[4].push_back(m_particles[5].m_position);
+        positionParticleList[5].push_back(m_particles[6].m_position);
+        positionParticleList[6].push_back(m_particles[7].m_position);
+        positionParticleList[7].push_back(m_particles[8].m_position);
+        positionParticleList[8].push_back(m_particles[5].m_position);
+        positionParticleList[9].push_back(m_particles[1].m_position);*/
     }
 }
 
